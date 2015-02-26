@@ -11,7 +11,7 @@ public class ComplexObjectParent {
 	float someFloat = 1.337f;
 	
 	protected static boolean equalsOrReferenceToObject(Object field1, Object field2,
-			Object object1, Object object2) {
+	        Object object1, Object object2) {
 		if (field1 == null) {
 			if (field2 != null) return false;
 		} else {
@@ -59,7 +59,7 @@ public class ComplexObjectParent {
 				if (!equalsOrReferenceToObject(check, otherCheck, this, other)) return false;
 			}
 		}
-		if (someFloat != other.someFloat) return false;
+		if (Math.abs(someFloat - other.someFloat) > 1e-7) return false;
 		return true;
 	}
 	
@@ -68,7 +68,7 @@ public class ComplexObjectParent {
 		final int prime = 31;
 		int result = 1;
 		result = prime * result + Float.floatToIntBits(someFloat);
-		result = prime * result + ((someObject == null) ? 0 : someObject.hashCode());
+		result = prime * result + (someObject == null ? 0 : someObject.hashCode());
 		return result;
 	}
 }

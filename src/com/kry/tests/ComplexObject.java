@@ -63,7 +63,7 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 				listOfObjectArrays.set(i, objectArray);
 			} else {
 				Object[] item = Arrays.copyOf(listOfObjectArrays.get(i),
-						listOfObjectArrays.get(i).length);
+				        listOfObjectArrays.get(i).length);
 				for (int j = 0; j < item.length; j++) {
 					if (item[j] == aObj.self) {
 						item[j] = self;
@@ -104,7 +104,7 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 			if (listOfIntArrays.size() != other.listOfIntArrays.size()) return false;
 			for (int i = 0; i < listOfIntArrays.size(); i++) {
 				if (!Arrays.equals(listOfIntArrays.get(i), other.listOfIntArrays.get(i)))
-					return false;
+				    return false;
 			}
 		}
 		if (!equalsOrReferenceToObject(self, other.self, this, other)) return false;
@@ -136,7 +136,7 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 						Object check = checkArray[j];
 						Object otherCheck = otherCheckArray[j];
 						if (!equalsOrReferenceToObject(check, otherCheck, this, other))
-							return false;
+						    return false;
 					}
 					
 				}
