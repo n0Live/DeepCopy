@@ -23,14 +23,14 @@ public final class CopyUtils {
 	 */
 	private final static Map<Class<?>, Object> primitiveWrappersMap = new HashMap<Class<?>, Object>();
 	static {
-		primitiveWrappersMap.put(boolean.class, new Boolean(false));
-		primitiveWrappersMap.put(byte.class, new Byte((byte) 0));
-		primitiveWrappersMap.put(short.class, new Short((short) 0));
-		primitiveWrappersMap.put(char.class, new Character((char) 0));
-		primitiveWrappersMap.put(int.class, new Integer(0));
-		primitiveWrappersMap.put(long.class, new Long(0l));
-		primitiveWrappersMap.put(float.class, new Float(0f));
-		primitiveWrappersMap.put(double.class, new Double(0));
+		primitiveWrappersMap.put(boolean.class, Boolean.valueOf(false));
+		primitiveWrappersMap.put(byte.class, Byte.valueOf((byte) 0));
+		primitiveWrappersMap.put(short.class, Short.valueOf((short) 0));
+		primitiveWrappersMap.put(char.class, Character.valueOf((char) 0));
+		primitiveWrappersMap.put(int.class, Integer.valueOf(0));
+		primitiveWrappersMap.put(long.class, Long.valueOf(0l));
+		primitiveWrappersMap.put(float.class, Float.valueOf(0f));
+		primitiveWrappersMap.put(double.class, Double.valueOf(0));
 	}
 	
 	/**
@@ -74,8 +74,8 @@ public final class CopyUtils {
 				
 				for (int i = 0; i < parameters.length; i++) {
 					// null or a primitive defaults
-					args[i] = (parameters[i].isPrimitive()) ? getPrimitiveDefault(parameters[i])
-							: null;
+					args[i] = parameters[i].isPrimitive() ? getPrimitiveDefault(parameters[i])
+					        : null;
 				}
 				
 				try {
@@ -98,8 +98,9 @@ public final class CopyUtils {
 	 * @param array
 	 *            array for copying
 	 * @return copy of the given array
+	 * @throws ReflectiveOperationException
 	 */
-	private static Object copyArray(Object array) {
+	private static Object copyArray(Object array) throws ReflectiveOperationException {
 		Class<?> arrayType = array.getClass().getComponentType();
 		int length = Array.getLength(array);
 		Object arrayCopy = Array.newInstance(arrayType, length);
@@ -129,7 +130,7 @@ public final class CopyUtils {
 	 * @throws ReflectiveOperationException
 	 */
 	private static <T> void copyFieldValues(Field[] fields, T fromObj, T toObj)
-			throws ReflectiveOperationException {
+	        throws ReflectiveOperationException {
 		Object value;
 		Object cloneValue;
 		for (Field field : fields) {
@@ -144,23 +145,6 @@ public final class CopyUtils {
 	}
 	
 	/**
-	 * Create a deep copy of the given {@code obj} by using reflections
-	 * 
-	 * @param obj
-	 *            object for copying
-	 * @return a deep copy of the given object
-	 */
-	public static <T> T deepCopy(T obj) {
-		try {
-			// for an external call create a new references map
-			references = new HashMap<>();
-			return deepCopy(obj, null);
-		} finally {
-			references.clear();
-		}
-	}
-	
-	/**
 	 * The entry point to the real {@code deepCopy} method
 	 * <p>
 	 * For the internal use only.
@@ -170,23 +154,88 @@ public final class CopyUtils {
 	 * @param recursiveCall
 	 *            must by {@code null} - use for overloading
 	 * @return a deep copy of the given object
+	 * @throws ReflectiveOperationException
 	 */
 	@SuppressWarnings("unchecked")
-	private static <T> T deepCopy(T obj, Object recursiveCall) {
+	private static <T> T deepCopy(T obj, Object recursiveCall) throws ReflectiveOperationException {
 		if (obj == null) return null;
+		
 		Class<T> clazz = (Class<T>) obj.getClass();
+		T copy = (T) constractNewObject(clazz);
+		
+		addToReferencesMap(obj, copy);
+		
+		Field[] fields = getFields(clazz);
+		copyFieldValues(fields, obj, copy);
+		return copy;
+	}
+	
+	/**
+	 * Returns an array of {@code Field} objects reflecting all the fields
+	 * declared by the given {@code class}
+	 * 
+	 * @param clazz
+	 *            {@code Class} object
+	 * @return array of {@code Field} objects
+	 */
+	private static Field[] getFields(Class<?> clazz) {
+		List<Field> result = new LinkedList<>();
+		while (clazz != null) {
+			Field[] fields = clazz.getDeclaredFields();
+			for (Field field : fields) {
+				// static fields are not needed
+				if (!Modifier.isStatic(field.getModifiers())) {
+					result.add(field);
+				}
+			}
+			// get up to the Superclass
+			clazz = clazz.getSuperclass();
+		}
+		return result.toArray(new Field[result.size()]);
+	}
+	
+	/**
+	 * Returns the object referenced by the given {@code obj}, or {@code null}
+	 * if the references map contains no mapping for the {@code obj}.
+	 * 
+	 * @param obj
+	 *            the key object
+	 * @return referenced object
+	 */
+	private static Object getFromReferencesMap(Object obj) {
+		Object result = references.get(obj);
+		// workaround the possible return an incorrect value from this map
+		return obj.getClass().isInstance(result) ? result : null;
+	}
+	
+	/**
+	 * Returns the wrapper object of a given primitive {@code Class} with the
+	 * default value
+	 * 
+	 * @param primitiveClazz
+	 *            primitive {@code Class}
+	 * @return the wrapper object of a primitive with the default value
+	 */
+	private static Object getPrimitiveDefault(Class<?> primitiveClazz) {
+		return primitiveWrappersMap.get(primitiveClazz);
+		
+	}
+	
+	/**
+	 * Create a deep copy of the given {@code obj} by using reflections
+	 * 
+	 * @param obj
+	 *            object for copying
+	 * @return a deep copy of the given object
+	 * @throws ReflectiveOperationException
+	 */
+	public static <T> T deepCopy(T obj) throws ReflectiveOperationException {
 		try {
-			T copy = (T) constractNewObject(clazz);
-			
-			addToReferencesMap(obj, copy);
-			
-			Field[] fields = getFields(clazz);
-			copyFieldValues(fields, obj, copy);
-			return copy;
-		} catch (ReflectiveOperationException e) {
-			Logger.getAnonymousLogger().info("deepCopy() was failed");
-			e.printStackTrace();
-			return null;
+			// for an external call create a new references map
+			references = new HashMap<>();
+			return deepCopy(obj, null);
+		} finally {
+			references.clear();
 		}
 	}
 	
@@ -199,9 +248,10 @@ public final class CopyUtils {
 	 * @param obj
 	 *            object for copying
 	 * @return a deep copy of the given object
+	 * @throws ReflectiveOperationException
 	 */
 	@SuppressWarnings({ "unchecked" })
-	public static <T> T deepCopyByCommonWay(T obj) {
+	public static <T> T deepCopyByCommonWay(T obj) throws ReflectiveOperationException {
 		Class<?> clazz = obj.getClass();
 		// Try to use a clone() method
 		if (obj instanceof Cloneable) {
@@ -209,7 +259,7 @@ public final class CopyUtils {
 				// find appropriate clone(), takes no parameters, and
 				// returns type instance of the obj
 				if (m.getName().equals("clone") && m.getParameterTypes().length == 0
-						&& m.getReturnType().isInstance(obj)) {
+				        && m.getReturnType().isInstance(obj)) {
 					try {
 						T copy = (T) m.invoke(obj);
 						return copy;
@@ -241,8 +291,10 @@ public final class CopyUtils {
 	 * @param clazz
 	 *            class of the {@code original} object
 	 * @return a deep copy of the given object
+	 * @throws ReflectiveOperationException
 	 */
-	public static Object getClone(Object original, Class<?> clazz) {
+	public static Object getClone(Object original, Class<?> clazz)
+	        throws ReflectiveOperationException {
 		if (original == null) return null;
 		
 		Object cloneValue = null;
@@ -264,55 +316,6 @@ public final class CopyUtils {
 			}
 		}
 		return cloneValue;
-	}
-	
-	/**
-	 * Returns an array of {@code Field} objects reflecting all the fields
-	 * declared by the given {@code class}
-	 * 
-	 * @param clazz
-	 *            {@code Class} object
-	 * @return array of {@code Field} objects
-	 */
-	private static Field[] getFields(Class<?> clazz) {
-		List<Field> result = new LinkedList<>();
-		while (clazz != null) {
-			Field[] fields = clazz.getDeclaredFields();
-			for (Field field : fields) {
-				// static fields are not needed
-				if (!Modifier.isStatic(field.getModifiers())) {
-					result.add(field);
-				}
-			}
-			// get up to the Superclass
-			clazz = clazz.getSuperclass();
-		}
-		return result.toArray(new Field[result.size()]);
-	}
-	
-	/**
-	 * Returns the object referenced by the given {@code obj}, or null if the
-	 * references map contains no mapping for the {@code obj}.
-	 * 
-	 * @param obj
-	 *            the key object
-	 * @return referenced object
-	 */
-	private static Object getFromReferencesMap(Object obj) {
-		return references.get(obj);
-	}
-	
-	/**
-	 * Returns the wrapper object of a given primitive {@code Class} with the
-	 * default value
-	 * 
-	 * @param primitiveClazz
-	 *            primitive {@code Class}
-	 * @return the wrapper object of a primitive with the default value
-	 */
-	private static Object getPrimitiveDefault(Class<?> primitiveClazz) {
-		return primitiveWrappersMap.get(primitiveClazz);
-		
 	}
 	
 	private CopyUtils() {
