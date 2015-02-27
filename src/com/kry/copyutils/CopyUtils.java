@@ -93,7 +93,7 @@ public final class CopyUtils {
 	}
 	
 	/**
-	 * Create a copy of the given array
+	 * Creates a copy of the given array
 	 * 
 	 * @param array
 	 *            array for copying
@@ -145,29 +145,59 @@ public final class CopyUtils {
 	}
 	
 	/**
-	 * The entry point to the real {@code deepCopy} method
-	 * <p>
-	 * For the internal use only.
+	 * Creates a copy of the given object.
 	 * 
 	 * @param obj
 	 *            object for copying
-	 * @param recursiveCall
-	 *            must by {@code null} - use for overloading
+	 * @param clazz
+	 *            class of the object
 	 * @return a deep copy of the given object
 	 * @throws ReflectiveOperationException
 	 */
-	@SuppressWarnings("unchecked")
-	private static <T> T deepCopy(T obj, Object recursiveCall) throws ReflectiveOperationException {
-		if (obj == null) return null;
-		
-		Class<T> clazz = (Class<T>) obj.getClass();
-		T copy = (T) constractNewObject(clazz);
+	private static Object copyObject(Object obj, Class<?> clazz)
+	        throws ReflectiveOperationException {
+		Object copy = constractNewObject(clazz);
 		
 		addToReferencesMap(obj, copy);
 		
 		Field[] fields = getFields(clazz);
 		copyFieldValues(fields, obj, copy);
 		return copy;
+	}
+	
+	/**
+	 * Returns a clone of the given object
+	 * 
+	 * @param original
+	 *            object for copying
+	 * @param clazz
+	 *            class of the {@code original} object
+	 * @return a deep copy of the given object
+	 * @throws ReflectiveOperationException
+	 */
+	@SuppressWarnings("unchecked")
+	private static <T> T getClone(T original, Class<?> clazz) throws ReflectiveOperationException {
+		if (original == null) return null;
+		
+		Object cloneValue = null;
+		
+		if (!clazz.isPrimitive()) {
+			// for objects - trying to give value from the references map
+			cloneValue = getFromReferencesMap(original);
+		}
+		
+		if (cloneValue == null) {
+			// workaround for suppressing calling of a Wrappers
+			Class<?> valueType = clazz.isPrimitive() ? clazz : original.getClass();
+			if (valueType.isArray()) {
+				cloneValue = copyArray(original);
+			} else if (valueType.isPrimitive()) {
+				cloneValue = original;
+			} else {
+				cloneValue = copyObject(original, valueType);
+			}
+		}
+		return (T) cloneValue;
 	}
 	
 	/**
@@ -229,11 +259,13 @@ public final class CopyUtils {
 	 * @return a deep copy of the given object
 	 * @throws ReflectiveOperationException
 	 */
+	@SuppressWarnings("unchecked")
 	public static <T> T deepCopy(T obj) throws ReflectiveOperationException {
 		try {
 			// for an external call create a new references map
 			references = new HashMap<>();
-			return deepCopy(obj, null);
+			Class<T> clazz = (Class<T>) obj.getClass();
+			return getClone(obj, clazz);
 		} finally {
 			references.clear();
 		}
@@ -281,41 +313,6 @@ public final class CopyUtils {
 			Logger.getAnonymousLogger().info("Try to use a copy constructor is fail");
 		}
 		return deepCopy(obj);
-	}
-	
-	/**
-	 * Returns a clone of the given object
-	 * 
-	 * @param original
-	 *            object for copying
-	 * @param clazz
-	 *            class of the {@code original} object
-	 * @return a deep copy of the given object
-	 * @throws ReflectiveOperationException
-	 */
-	public static Object getClone(Object original, Class<?> clazz)
-	        throws ReflectiveOperationException {
-		if (original == null) return null;
-		
-		Object cloneValue = null;
-		
-		if (!clazz.isPrimitive()) {
-			// for objects - trying to give value from the references map
-			cloneValue = getFromReferencesMap(original);
-		}
-		
-		if (cloneValue == null) {
-			// workaround for suppressing calling of a Wrappers
-			Class<?> valueType = clazz.isPrimitive() ? clazz : original.getClass();
-			if (valueType.isArray()) {
-				cloneValue = copyArray(original);
-			} else if (valueType.isPrimitive()) {
-				cloneValue = original;
-			} else {
-				cloneValue = deepCopy(original, null);
-			}
-		}
-		return cloneValue;
 	}
 	
 	private CopyUtils() {

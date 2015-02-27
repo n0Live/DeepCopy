@@ -3,6 +3,7 @@ package com.kry.tests;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.TreeSet;
@@ -75,6 +76,37 @@ public class DeepCopyTest {
 		
 		testClone = CopyUtils.deepCopy(original);
 		assertTrue("Something going wrong", compareComplexObjects(original, testClone));
+	}
+	
+	@Test
+	public void testDeepCopyWithArraysT() throws ReflectiveOperationException {
+		int[] intArray = { 10, 127, 10000 };
+		int[] intArrayClone = CopyUtils.deepCopy(intArray);
+		
+		assertTrue("int[] not equals to the original", Arrays.equals(intArray, intArrayClone));
+		assertTrue("int[] not equals to the referenceClone",
+		        Arrays.equals(intArray.clone(), intArrayClone));
+		
+		ComplexObject[] complexObjectArray = { original, referenceClone };
+		ComplexObject[] complexObjectArrayClone = CopyUtils.deepCopy(complexObjectArray);
+		
+		assertTrue("ComplexObject[] not equals to the original",
+		        Arrays.equals(complexObjectArray, complexObjectArrayClone));
+		assertTrue("ComplexObject[] not equals to the referenceClone",
+		        Arrays.equals(complexObjectArray.clone(), complexObjectArrayClone));
+	}
+	
+	@Test
+	public void testDeepCopyWithPrimitiviesT() throws ReflectiveOperationException {
+		int i = 10000;
+		int iClone = CopyUtils.deepCopy(i);
+		
+		assertTrue("int not equals to the original", i == iClone);
+		
+		Integer i2 = new Integer(200);
+		Integer i2Clone = CopyUtils.deepCopy(i2);
+		
+		assertTrue("Wrapped int not equals to the original", i2.equals(i2Clone));
 	}
 	
 	@Test
