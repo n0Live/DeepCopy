@@ -1,47 +1,57 @@
 <project name='CopyUtilites' default='jar' >
-  <property name="src" value="./src" />
-  <property name="test-dir" value="**/tests/**" />
-  <property name="dest" value="./bin" />
+	<property name="src" value="./src" />
+	<property name="tests" value="**/tests/**" />
+	<property name="dest" value="./bin" />
+	<property name="junit" value="lib/junit-4.10.jar" />
 
-  <target name='compile' depends='clean'>
-    <mkdir dir="${dest}"/>
-    <javac srcdir="${src}" destdir="${dest}" includeantruntime="false">
-		<exclude name="${test-dir}" />
-		<classpath path="."/>
-    </javac>
-  </target>
+	<target name="prepare">
+  		<mkdir dir="${dest}"/>
+		<copy todir="${dest}">
+			<fileset dir="${src}">
+				<exclude name="${tests}"/>
+				<include name="**/*.java"/>
+			</fileset>
+		</copy>
+	</target>
+
+	<target name="compile" depends="clean, prepare">
+		<javac srcdir="${src}" destdir="${dest}" includeantruntime="false">
+			<exclude name="${tests}"/>
+			<classpath path="."/>
+		</javac>
+	</target>
   
-  <target name='jar' depends='compile'>
-    <jar destfile="CopyUtilites.jar" basedir="${dest}" includes="**/*.class" filesetmanifest="mergewithoutmain">
-        <manifest>
-             <attribute name="Sealed" value="true"/>
-        </manifest>
-	</jar>
-  </target>
+	<target name="jar" depends="compile">
+		<jar destfile="CopyUtilites.jar" basedir="${dest}" includes="**/*">
+			<manifest>
+				<attribute name="Sealed" value="true"/>
+			</manifest>
+		</jar>
+	</target>
   
-  <target name="compileTest" depends="compile" description="compile jUnit Test cases ">
-    <javac srcdir="${src}" destdir="${dest}" includeantruntime="true" debug="true" >
-		<include name="**/*Test*.java"/>
-	</javac>
-  </target>
+	<target name="compileTest" depends="compile" description="compile jUnit Test cases ">
+		<javac srcdir="${src}" destdir="${dest}" includeantruntime="true" debug="true" >
+			<include name="${tests}"/>
+		</javac>
+	</target>
 
-  <target name="test" depends="compileTest">
-  <junit>
-    <classpath>
-      <pathelement location="${dest}" />    
-      <pathelement location="lib/junit-4.10.jar"/>
-    </classpath>    
-    <batchtest>
-       <fileset dir="${src}">
-            <include name="**/*Test*" />
-       </fileset>
-    </batchtest>
-    <formatter type="brief" usefile="false"/>
-  </junit>
-  </target>   
+	<target name="test" depends="compileTest">
+		<junit>
+			<classpath>
+				<pathelement location="${dest}"/>    
+				<pathelement location="${junit}"/>
+			</classpath>    
+			<batchtest>
+				<fileset dir="${src}">
+					<include name="${tests}"/>
+				</fileset>
+			</batchtest>
+			<formatter type="brief" usefile="false"/>
+		</junit>
+	</target>   
 
-  <target name="clean">
-	<delete dir="${dest}" />
-  </target>
+	<target name="clean">
+		<delete dir="${dest}"/>
+	</target>
 
 </project>  
