@@ -286,27 +286,26 @@ public final class CopyUtils {
 		Class<?> clazz = obj.getClass();
 		// Try to use a clone() method
 		if (obj instanceof Cloneable) {
-			for (Method m : clazz.getMethods())
-				// find appropriate clone(), takes no parameters, and
-				// returns type instance of the obj
-				if (m.getName().equals("clone") && m.getParameterTypes().length == 0
-				        && m.getReturnType().isInstance(obj)) {
-					try {
-						T copy = (T) m.invoke(obj);
-						return copy;
-					} catch (ReflectiveOperationException e) {
-						Logger.getAnonymousLogger().info("Try to use a clone() is fail");
-					} catch (IllegalArgumentException e) {
-						e.printStackTrace();
-					}
+			try {
+				// find appropriate clone(), takes no parameters,
+				Method m = clazz.getMethod("clone");
+				// and returns type instance of the obj
+				if (m.getReturnType().isInstance(obj)) {
+					T copy = (T) m.invoke(obj);
+					return copy;
 				}
+			} catch (ReflectiveOperationException e) {
+				Logger.getAnonymousLogger().info("Try to use a clone() is fail");
+			} catch (IllegalArgumentException e) {
+				e.printStackTrace();
+			}
 		}
 		// Try to use a copy constructor
+		Constructor<T> ctor;
 		Class<?>[] paramTypes = new Class[] { clazz };
-		Constructor<T> constructor;
 		try {
-			constructor = (Constructor<T>) clazz.getDeclaredConstructor(paramTypes);
-			T copy = constructor.newInstance(obj);
+			ctor = (Constructor<T>) clazz.getDeclaredConstructor(paramTypes);
+			T copy = ctor.newInstance(obj);
 			return copy;
 		} catch (ReflectiveOperationException e) {
 			Logger.getAnonymousLogger().info("Try to use a copy constructor is fail");
