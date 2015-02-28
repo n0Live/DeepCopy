@@ -183,19 +183,18 @@ public final class CopyUtils {
 		
 		if (!clazz.isPrimitive()) {
 			// for objects - trying to give value from the references map
-			cloneValue = getFromReferencesMap(original);
+			if ((cloneValue = getFromReferencesMap(original)) != null) return (T) cloneValue;
 		}
 		
-		if (cloneValue == null) {
-			// workaround for suppressing calling of a Wrappers
-			Class<?> valueType = clazz.isPrimitive() ? clazz : original.getClass();
-			if (valueType.isArray()) {
-				cloneValue = copyArray(original);
-			} else if (valueType.isPrimitive()) {
-				cloneValue = original;
-			} else {
-				cloneValue = copyObject(original, valueType);
-			}
+		// workaround for suppressing calling of a Wrappers
+		Class<?> valueType = clazz.isPrimitive() ? clazz : original.getClass();
+		
+		if (valueType.isArray()) {
+			cloneValue = copyArray(original);
+		} else if (valueType.isPrimitive() || valueType.isEnum()) {
+			cloneValue = original;
+		} else {
+			cloneValue = copyObject(original, valueType);
 		}
 		return (T) cloneValue;
 	}

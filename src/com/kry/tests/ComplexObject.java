@@ -10,7 +10,22 @@ import java.util.List;
  * <p>
  * <i>Warning: for the test using only!</i>
  */
-public class ComplexObject extends ComplexObjectParent implements Cloneable {
+public final class ComplexObject extends ComplexObjectParent implements Cloneable {
+	enum Enum {
+		ELEMENT1, ELEMENT2
+	}
+	
+	protected Enum e;
+	
+	private final Runnable r = new Runnable() {
+		int someValue = 300;
+		String someString = "String";
+		
+		@Override
+		public void run() {
+			System.out.println(someString + someValue++);
+		}
+	};
 	
 	public final ComplexObject self;
 	
@@ -28,6 +43,8 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 	
 	public ComplexObject() {
 		self = this;
+		
+		e = Enum.ELEMENT1;
 		
 		objectArray = new ComplexObject[2];
 		Arrays.fill(objectArray, self);
@@ -49,6 +66,7 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 	public ComplexObject(ComplexObject aObj) {
 		super(aObj);
 		self = this;
+		e = aObj.e;
 		
 		objectArray = aObj.objectArray.clone();
 		for (int i = 0; i < objectArray.length; i++) {
@@ -95,6 +113,7 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 		if (!super.equals(obj)) return false;
 		if (getClass() != obj.getClass()) return false;
 		ComplexObject other = (ComplexObject) obj;
+		if (e != other.e) return false;
 		if (list == null) {
 			if (other.list != null) return false;
 		} else if (!list.equals(other.list)) return false;
@@ -153,6 +172,8 @@ public class ComplexObject extends ComplexObjectParent implements Cloneable {
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
+		result = prime * result + (e == null ? 0 : e.hashCode());
+		result = prime * result + (r == null ? 0 : r.hashCode());
 		result = prime * result + (list == null ? 0 : list.hashCode());
 		result = prime * result + (listOfIntArrays == null ? 0 : listOfIntArrays.hashCode());
 		result = prime * result + somePrimitive;
