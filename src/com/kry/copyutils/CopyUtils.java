@@ -16,7 +16,7 @@ public final class CopyUtils {
 	 * Map for mapping object references between <i>original</i> and
 	 * <i>clone</i>
 	 */
-	private static Map<Object, Object> references;
+	private static Map<String, Object> references;
 	
 	/**
 	 * Map which contains a default wrapped values for a primitive types
@@ -43,7 +43,9 @@ public final class CopyUtils {
 	 *            clone object
 	 */
 	private static void addToReferencesMap(Object original, Object copy) {
-		references.put(original, copy);
+		String key = original.getClass().getName() + "@"
+		        + Integer.toHexString(System.identityHashCode(original));
+		references.put(key, copy);
 	}
 	
 	/**
@@ -232,9 +234,11 @@ public final class CopyUtils {
 	 * @return referenced object
 	 */
 	private static Object getFromReferencesMap(Object obj) {
-		Object result = references.get(obj);
-		// workaround the possible return an incorrect value from this map
-		return obj.getClass().isInstance(result) ? result : null;
+		String key = obj.getClass().getName() + "@"
+		        + Integer.toHexString(System.identityHashCode(obj));
+		Object result = references.get(key);
+		
+		return result; // obj.getClass().isInstance(result) ? result : null;
 	}
 	
 	/**
