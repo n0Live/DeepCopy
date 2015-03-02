@@ -301,8 +301,6 @@ public final class CopyUtils {
 				}
 			} catch (ReflectiveOperationException e) {
 				Logger.getAnonymousLogger().info("Try to use a clone() is fail");
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
 			}
 		}
 		// Try to use a copy constructor
