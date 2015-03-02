@@ -16,7 +16,7 @@ public final class CopyUtils {
 	 * Map for mapping object references between <i>original</i> and
 	 * <i>clone</i>
 	 */
-	private static Map<String, Object> references;
+	private final static ThreadLocal<Map<String, Object>> references = new ThreadLocal<>();
 	
 	/**
 	 * Map which contains a default wrapped values for a primitive types
@@ -45,7 +45,7 @@ public final class CopyUtils {
 	private static void addToReferencesMap(Object original, Object copy) {
 		String key = original.getClass().getName() + "@"
 		        + Integer.toHexString(System.identityHashCode(original));
-		references.put(key, copy);
+		references.get().put(key, copy);
 	}
 	
 	/**
@@ -236,7 +236,7 @@ public final class CopyUtils {
 	private static Object getFromReferencesMap(Object obj) {
 		String key = obj.getClass().getName() + "@"
 		        + Integer.toHexString(System.identityHashCode(obj));
-		Object result = references.get(key);
+		Object result = references.get().get(key);
 		
 		return result; // obj.getClass().isInstance(result) ? result : null;
 	}
@@ -266,11 +266,12 @@ public final class CopyUtils {
 	public static <T> T deepCopy(T obj) throws ReflectiveOperationException {
 		try {
 			// for an external call create a new references map
-			references = new HashMap<>();
+			references.set(new HashMap<String, Object>());
 			Class<T> clazz = (Class<T>) obj.getClass();
 			return getClone(obj, clazz);
 		} finally {
-			references.clear();
+			references.get().clear();
+			references.remove();
 		}
 	}
 	
