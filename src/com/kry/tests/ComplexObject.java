@@ -41,8 +41,12 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	
 	public List<int[]> listOfIntArrays;
 	
+	private final Class<ComplexObject> clazz;
+	
+	@SuppressWarnings("unchecked")
 	public ComplexObject() {
 		self = this;
+		clazz = (Class<ComplexObject>) self.getClass();
 		
 		e = Enum.ELEMENT1;
 		
@@ -66,6 +70,8 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	public ComplexObject(ComplexObject aObj) {
 		super(aObj);
 		self = this;
+		clazz = (Class<ComplexObject>) self.getClass();
+		
 		e = aObj.e;
 		
 		objectArray = aObj.objectArray.clone();
@@ -127,6 +133,8 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 			}
 		}
 		if (!equalsOrReferenceToObject(self, other.self, this, other)) return false;
+		if (!equalsOrReferenceToObject(clazz, other.clazz, this.getClass(), other.getClass()))
+		    return false;
 		if (objectArray == null) {
 			if (other.objectArray != null) return false;
 		} else {
