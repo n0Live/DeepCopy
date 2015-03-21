@@ -9,6 +9,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public final class CopyUtils {
@@ -17,6 +18,8 @@ public final class CopyUtils {
 	 * <i>clone</i>
 	 */
 	private final static ThreadLocal<Map<String, Object>> references = new ThreadLocal<>();
+	
+	private final static Logger log = Logger.getLogger(CopyUtils.class.getName());
 	
 	/**
 	 * Map which contains a default wrapped values for a primitive types
@@ -43,8 +46,7 @@ public final class CopyUtils {
 	 *            clone object
 	 */
 	private static void addToReferencesMap(Object original, Object copy) {
-		String key = original.getClass().getName() + "@"
-		        + Integer.toHexString(System.identityHashCode(original));
+		String key = getUniqueName(original);
 		references.get().put(key, copy);
 	}
 	
@@ -225,8 +227,7 @@ public final class CopyUtils {
 	 * @return referenced object
 	 */
 	private static Object getFromReferencesMap(Object obj) {
-		String key = obj.getClass().getName() + "@"
-		        + Integer.toHexString(System.identityHashCode(obj));
+		String key = getUniqueName(obj);
 		Object result = references.get().get(key);
 		
 		return result; // obj.getClass().isInstance(result) ? result : null;
@@ -242,7 +243,17 @@ public final class CopyUtils {
 	 */
 	private static Object getPrimitiveDefault(Class<?> primitiveClazz) {
 		return primitiveWrappersMap.get(primitiveClazz);
-		
+	}
+	
+	/**
+	 * Returns the unique name of the given object
+	 * 
+	 * @param obj
+	 *            the object
+	 * @return the unique name of the given object as a {@code String}
+	 */
+	private static String getUniqueName(Object obj) {
+		return obj.getClass().getName() + "@" + Integer.toHexString(System.identityHashCode(obj));
 	}
 	
 	/**
@@ -288,10 +299,11 @@ public final class CopyUtils {
 				// and returns type instance of the obj
 				if (m.getReturnType().isInstance(obj)) {
 					T copy = (T) m.invoke(obj);
+					log.log(Level.FINEST, "Returns a copy by clone method");
 					return copy;
 				}
 			} catch (ReflectiveOperationException e) {
-				Logger.getAnonymousLogger().info("Try to use a clone() is fail");
+				log.log(Level.INFO, "Attempt to use a clone method failed: {0}", e.toString());
 			}
 		}
 		// Try to use a copy constructor
@@ -300,9 +312,10 @@ public final class CopyUtils {
 		try {
 			ctor = (Constructor<T>) clazz.getDeclaredConstructor(paramTypes);
 			T copy = ctor.newInstance(obj);
+			log.log(Level.FINEST, "Returns a copy by copy constructor");
 			return copy;
 		} catch (ReflectiveOperationException e) {
-			Logger.getAnonymousLogger().info("Try to use a copy constructor is fail");
+			log.log(Level.FINE, "Attempt to use a copy constructor failed: {0}", e.toString());
 		}
 		return deepCopy(obj);
 	}
