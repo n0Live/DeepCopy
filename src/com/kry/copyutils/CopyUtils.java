@@ -60,6 +60,15 @@ public final class CopyUtils {
 	 */
 	private static Object constractNewObject(Class<?> clazz) throws ReflectiveOperationException {
 		Object newObject = null;
+		
+		// try to use default constructor (it's cached in class)
+		try {
+			newObject = clazz.newInstance();
+			return newObject;
+		} catch (ReflectiveOperationException e) {
+			// do nothing
+		}
+		
 		// gets all the declared constructors and try to use them in turn
 		Constructor<?>[] constructors = clazz.getDeclaredConstructors();
 		if (constructors.length > 0) {
@@ -186,7 +195,8 @@ public final class CopyUtils {
 		
 		if (valueType.isArray()) {
 			cloneValue = copyArray(original);
-		} else if (valueType.isPrimitive() || valueType.isEnum() || valueType.equals(Class.class)) {
+		} else if (valueType.isPrimitive() || valueType.isEnum() || valueType.equals(Class.class)
+		        || valueType.equals(Void.class)) {
 			cloneValue = original;
 		} else {
 			cloneValue = copyObject(original, valueType);

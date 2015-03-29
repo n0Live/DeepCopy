@@ -1,5 +1,6 @@
 package com.kry.tests;
 
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -16,6 +17,8 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	}
 	
 	protected Enum e;
+	
+	public Void v;
 	
 	private final Runnable r = new Runnable() {
 		int someValue = 300;
@@ -44,7 +47,7 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	private final Class<ComplexObject> clazz;
 	
 	@SuppressWarnings("unchecked")
-	public ComplexObject() {
+	ComplexObject() {
 		self = this;
 		clazz = (Class<ComplexObject>) self.getClass();
 		
@@ -64,6 +67,8 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 		
 		int[] intArray = { somePrimitive, someWrapped };
 		listOfIntArrays = new ArrayList<>(Arrays.asList(intArray));
+		
+		v = null;
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
@@ -73,6 +78,7 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 		clazz = (Class<ComplexObject>) self.getClass();
 		
 		e = aObj.e;
+		v = aObj.v;
 		
 		objectArray = aObj.objectArray.clone();
 		for (int i = 0; i < objectArray.length; i++) {
@@ -132,6 +138,9 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 				    return false;
 			}
 		}
+		if (v == null) {
+			if (other.v != null) return false;
+		} else if (!v.equals(other.v)) return false;
 		if (!equalsOrReferenceToObject(self, other.self, this, other)) return false;
 		if (!equalsOrReferenceToObject(clazz, other.clazz, this.getClass(), other.getClass()))
 		    return false;
@@ -197,6 +206,15 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 		
 		someWrapped = new Integer(24);
 		map.put(objectArray[2].toString(), self);
+		
+		Constructor<Void> constructor;
+		try {
+			constructor = Void.class.getDeclaredConstructor();
+			constructor.setAccessible(true);
+			v = constructor.newInstance();
+		} catch (ReflectiveOperationException e) {
+			e.printStackTrace();
+		}
 	}
 	
 }
