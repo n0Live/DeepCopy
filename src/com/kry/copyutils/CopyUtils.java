@@ -24,14 +24,14 @@ public final class CopyUtils {
 	/**
 	 * Map which contains a default wrapped values for a primitive types
 	 */
-	private final static Map<Class<?>, Object> primitiveWrappersMap = new HashMap<Class<?>, Object>();
+	private final static Map<Class<?>, Object> primitiveWrappersMap = new HashMap<>();
 	static {
-		primitiveWrappersMap.put(boolean.class, Boolean.valueOf(false));
+		primitiveWrappersMap.put(boolean.class, Boolean.FALSE);
 		primitiveWrappersMap.put(byte.class, Byte.valueOf((byte) 0));
 		primitiveWrappersMap.put(short.class, Short.valueOf((short) 0));
 		primitiveWrappersMap.put(char.class, Character.valueOf((char) 0));
 		primitiveWrappersMap.put(int.class, Integer.valueOf(0));
-		primitiveWrappersMap.put(long.class, Long.valueOf(0l));
+		primitiveWrappersMap.put(long.class, Long.valueOf(0L));
 		primitiveWrappersMap.put(float.class, Float.valueOf(0f));
 		primitiveWrappersMap.put(double.class, Double.valueOf(0));
 	}
