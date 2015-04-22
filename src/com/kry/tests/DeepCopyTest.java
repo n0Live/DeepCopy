@@ -35,7 +35,7 @@ public class DeepCopyTest {
 	@Before
 	public void setUp() throws Exception {
 		original = new ComplexObject();
-		referenceClone = original.clone();
+		referenceClone = (ComplexObject) original.clone();
 	}
 	
 	@Test
@@ -46,7 +46,7 @@ public class DeepCopyTest {
 		original.toComplicate();
 		assertFalse("it's just a shallow copy", compareComplexObjects(original, referenceClone));
 		
-		referenceClone = original.clone();
+		referenceClone = (ComplexObject) original.clone();
 		assertTrue("Something going wrong", compareComplexObjects(original, referenceClone));
 	}
 	

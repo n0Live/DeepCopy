@@ -72,7 +72,7 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	}
 	
 	@SuppressWarnings({ "unchecked", "rawtypes" })
-	public ComplexObject(ComplexObject aObj) {
+	private ComplexObject(ComplexObject aObj) {
 		super(aObj);
 		self = this;
 		clazz = (Class<ComplexObject>) self.getClass();
@@ -115,7 +115,7 @@ public final class ComplexObject extends ComplexObjectParent implements Cloneabl
 	}
 	
 	@Override
-	public ComplexObject clone() {
+	protected Object clone() {
 		return new ComplexObject(this);
 	}
 	

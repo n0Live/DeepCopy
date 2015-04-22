@@ -1,3 +1,22 @@
+/**
+ * {@literal
+ * 
+ * Copyright (c) 2015 Egor Krasnopolin <egor.krasnopolin@googlemail.com>
+ * 
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ * 
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ * 
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.
+ *  
+ * }
+ */
 package com.kry.copyutils;
 
 import java.lang.reflect.Array;
@@ -5,10 +24,15 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.security.AccessController;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -19,21 +43,29 @@ public final class CopyUtils {
 	 */
 	private final static ThreadLocal<Map<String, Object>> references = new ThreadLocal<>();
 	
-	private final static Logger log = Logger.getLogger(CopyUtils.class.getName());
+	private final static Logger log = Logger.getLogger(CopyUtils.class.getPackage().getName());
 	
 	/**
 	 * Map which contains a default wrapped values for a primitive types
 	 */
 	private final static Map<Class<?>, Object> primitiveWrappersMap = new HashMap<>();
+	/**
+	 * An uninstantiable classes
+	 */
+	private final static Set<Class<?>> uninstantiableClasses = new HashSet<>();
+	
 	static {
 		primitiveWrappersMap.put(boolean.class, Boolean.FALSE);
-		primitiveWrappersMap.put(byte.class, Byte.valueOf((byte) 0));
-		primitiveWrappersMap.put(short.class, Short.valueOf((short) 0));
-		primitiveWrappersMap.put(char.class, Character.valueOf((char) 0));
-		primitiveWrappersMap.put(int.class, Integer.valueOf(0));
-		primitiveWrappersMap.put(long.class, Long.valueOf(0L));
-		primitiveWrappersMap.put(float.class, Float.valueOf(0f));
-		primitiveWrappersMap.put(double.class, Double.valueOf(0));
+		primitiveWrappersMap.put(byte.class, (byte) 0);
+		primitiveWrappersMap.put(short.class, (short) 0);
+		primitiveWrappersMap.put(char.class, (char) 0);
+		primitiveWrappersMap.put(int.class, 0);
+		primitiveWrappersMap.put(long.class, 0L);
+		primitiveWrappersMap.put(float.class, 0f);
+		primitiveWrappersMap.put(double.class, (double) 0);
+		
+		uninstantiableClasses.add(Class.class);
+		uninstantiableClasses.add(Void.class);
 	}
 	
 	/**
@@ -51,6 +83,17 @@ public final class CopyUtils {
 	}
 	
 	/**
+	 * Check if that class is uninstantiable
+	 * 
+	 * @param clazz
+	 *            checked class
+	 * @return {@code true} if that class is uninstantiable
+	 */
+	private static boolean isUninstantiable(Class<?> clazz) {
+		return uninstantiableClasses.contains(clazz);
+	}
+	
+	/**
 	 * Constructs a new object instance using the constructor of a given class
 	 * 
 	 * @param clazz
@@ -59,12 +102,9 @@ public final class CopyUtils {
 	 * @throws ReflectiveOperationException
 	 */
 	private static Object constractNewObject(Class<?> clazz) throws ReflectiveOperationException {
-		Object newObject = null;
-		
 		// try to use default constructor (it's cached in class)
 		try {
-			newObject = clazz.newInstance();
-			return newObject;
+			return clazz.newInstance();
 		} catch (ReflectiveOperationException e) {
 			// do nothing
 		}
@@ -72,28 +112,27 @@ public final class CopyUtils {
 		// gets all the declared constructors and try to use them in turn
 		Constructor<?>[] constructors = clazz.getDeclaredConstructors();
 		if (constructors.length > 0) {
-			for (Constructor<?> constructor : constructors) {
-				Class<?>[] parameters = constructor.getParameterTypes();
-				Object[] args = new Object[parameters.length];
-				
-				for (int i = 0; i < parameters.length; i++) {
-					// null or a primitive defaults
-					args[i] = parameters[i].isPrimitive() ? getPrimitiveDefault(parameters[i])
-					        : null;
-				}
-				
-				try {
-					// for using private constructors
-					constructor.setAccessible(true);
-					newObject = constructor.newInstance(args);
-					if (newObject != null) return newObject;
-				} catch (ReflectiveOperationException e) {
-					// go to next constructor
-					continue;
-				}
-			}
-		}
-		return newObject;
+            for (Constructor<?> constructor : constructors) {
+                Class<?>[] parameters = constructor.getParameterTypes();
+                Object[] args = new Object[parameters.length];
+
+                for (int i = 0; i < parameters.length; i++) {
+                    // null or a primitive defaults
+                    args[i] = parameters[i].isPrimitive() ? getPrimitiveDefault(parameters[i])
+                            : null;
+                }
+
+                try {
+                    // for using private constructors
+                    constructor.setAccessible(true);
+                    return constructor.newInstance(args);
+                } catch (ReflectiveOperationException e) {
+                    // go to next constructor
+                    continue;
+                }
+            }
+        }
+		return null;
 	}
 	
 	/**
@@ -183,20 +222,20 @@ public final class CopyUtils {
 	private static <T> T getClone(T original, Class<?> clazz) throws ReflectiveOperationException {
 		if (original == null) return null;
 		
-		Object cloneValue = null;
+		Object cloneValue;
+		boolean isPrimitive = clazz.isPrimitive();
 		
-		if (!clazz.isPrimitive()) {
+		if (!isPrimitive) {
 			// for objects - trying to give value from the references map
 			if ((cloneValue = getFromReferencesMap(original)) != null) return (T) cloneValue;
 		}
 		
 		// workaround for suppressing calling of a Wrappers
-		Class<?> valueType = clazz.isPrimitive() ? clazz : original.getClass();
+		Class<?> valueType = isPrimitive ? clazz : original.getClass();
 		
 		if (valueType.isArray()) {
 			cloneValue = copyArray(original);
-		} else if (valueType.isPrimitive() || valueType.isEnum() || valueType.equals(Class.class)
-		        || valueType.equals(Void.class)) {
+		} else if (isPrimitive || valueType.isEnum() || isUninstantiable(valueType)) {
 			cloneValue = original;
 		} else {
 			cloneValue = copyObject(original, valueType);
@@ -239,7 +278,7 @@ public final class CopyUtils {
 	private static Object getFromReferencesMap(Object obj) {
 		String key = getUniqueName(obj);
 		Object result = references.get().get(key);
-		
+
 		return result; // obj.getClass().isInstance(result) ? result : null;
 	}
 	
@@ -275,13 +314,14 @@ public final class CopyUtils {
 	 * @throws ReflectiveOperationException
 	 */
 	@SuppressWarnings("unchecked")
-	public static <T> T deepCopy(T obj) throws ReflectiveOperationException {
+	public static <T> T deepCopy(final T obj) throws ReflectiveOperationException {
 		try {
-			// for an external call create a new references map
+			// set a new threadlocal references map
 			references.set(new HashMap<String, Object>());
 			Class<T> clazz = (Class<T>) obj.getClass();
 			return getClone(obj, clazz);
 		} finally {
+			// helps to GC
 			references.get().clear();
 			references.remove();
 		}
@@ -299,28 +339,37 @@ public final class CopyUtils {
 	 * @throws ReflectiveOperationException
 	 */
 	@SuppressWarnings({ "unchecked" })
-	public static <T> T deepCopyByCommonWay(T obj) throws ReflectiveOperationException {
+	public static <T> T deepCopyByCommonWay(final T obj) throws ReflectiveOperationException {
+		if (obj == null) return null;
+		
 		Class<?> clazz = obj.getClass();
-		// Try to use a clone() method
+		
+		// try to use a clone() method
 		if (obj instanceof Cloneable) {
 			try {
 				// find appropriate clone(), takes no parameters,
-				Method m = clazz.getMethod("clone");
+				final Method m = clazz.getDeclaredMethod("clone");
 				// and returns type instance of the obj
 				if (m.getReturnType().isInstance(obj)) {
-					T copy = (T) m.invoke(obj);
+					// for using protected method clone()
+					SetMethodAccessible<T> accessible = new SetMethodAccessible<>(m, obj);
+					T copy = AccessController.doPrivileged(accessible);
 					log.log(Level.FINEST, "Returns a copy by clone method");
 					return copy;
 				}
-			} catch (ReflectiveOperationException e) {
-				log.log(Level.INFO, "Attempt to use a clone method failed: {0}", e.toString());
+			} catch (PrivilegedActionException e) {
+				log.log(Level.FINE, "Attempt to use a clone method failed: {0}", e.getCause()
+				        .toString());
 			}
 		}
+		
 		// Try to use a copy constructor
-		Constructor<T> ctor;
-		Class<?>[] paramTypes = new Class[] { clazz };
+		final Constructor<T> ctor;
+		final Class<?>[] paramTypes = new Class[] { clazz };
 		try {
 			ctor = (Constructor<T>) clazz.getDeclaredConstructor(paramTypes);
+			// for using private constructor
+			ctor.setAccessible(true);
 			T copy = ctor.newInstance(obj);
 			log.log(Level.FINEST, "Returns a copy by copy constructor");
 			return copy;
@@ -333,4 +382,20 @@ public final class CopyUtils {
 	private CopyUtils() {
 	}
 	
+	private final static class SetMethodAccessible<T> implements PrivilegedExceptionAction<T> {
+		final private Method method;
+		final private Object args;
+		
+		SetMethodAccessible(Method method, Object args) {
+			this.method = method;
+			this.args = args;
+		}
+		
+		@SuppressWarnings("unchecked")
+		@Override
+		public T run() throws ReflectiveOperationException {
+			method.setAccessible(true);
+			return (T) method.invoke(args);
+		}
+	}
 }
